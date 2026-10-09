@@ -53,6 +53,31 @@ class DatasetFactory:
                 embodiment_tag = dataset_spec.embodiment_tag
                 assert embodiment_tag is not None, "Embodiment tag is required"
                 assert self.config.data.mode == "single_turn", "Only single turn mode is supported"
+                if dataset_spec.dataset_type in {"chip_native", "chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}:
+                    from gr00t.data.dataset.chip_native_dataset import ChipNativeDataset
+
+                    if EmbodimentTag(embodiment_tag) != EmbodimentTag.NEW_EMBODIMENT:
+                        raise ValueError("CHIP data requires NEW_EMBODIMENT")
+                    if self.config.data.allow_padding:
+                        raise ValueError("CHIP future action padding must be disabled")
+                    dataset_class = ChipNativeDataset
+                    if dataset_spec.dataset_type in {"chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}:
+                        from gr00t.data.dataset.chip_replay_dataset import ChipReplayDataset
+
+                        dataset_class = ChipReplayDataset
+                    dataset = dataset_class(
+                        dataset_path,
+                        self.config.data.modality_configs[embodiment_tag],
+                        shard_size=self.config.data.shard_size,
+                        seed=self.config.data.seed,
+                        task_description=self.config.data.chip_task_description,
+                        val_ratio=self.config.data.chip_val_ratio,
+                        **({"yaw_canonical": dataset_spec.dataset_type in {"chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"},
+                            "ideal_state": dataset_spec.dataset_type == "chip_ideal_yaw_canonical"}
+                           if dataset_spec.dataset_type != "chip_native" else {}),
+                    )
+                    datasets.append(dataset)
+                    continue
                 # rank-0 writes stats; helper barriers before peers read them.
                 with run_or_wait_on_rank0(label=f"generate_stats({dataset_path})") as is_rank0:
                     if is_rank0:

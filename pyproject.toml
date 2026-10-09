@@ -78,6 +78,9 @@ dev = [
 where = ["."]
 include = ["gr00t*"]
 
+[tool.setuptools.package-data]
+"gr00t.data" = ["chip_replay_kinematics.json"]
+
 [tool.uv]
 required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",

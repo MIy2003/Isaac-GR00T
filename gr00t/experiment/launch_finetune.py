@@ -52,6 +52,24 @@ if __name__ == "__main__":
     ft_config.embodiment_tag = EmbodimentTag.resolve(ft_config.embodiment_tag)
     embodiment_tag = ft_config.embodiment_tag.value
 
+    if ft_config.dataset_format in {"chip_native", "chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}:
+        from gr00t.configs.data.chip_native_config import chip_native_modality_config
+        from gr00t.configs.data.embodiment_configs import register_modality_config
+
+        if ft_config.embodiment_tag != EmbodimentTag.NEW_EMBODIMENT:
+            raise ValueError("CHIP datasets require --embodiment-tag NEW_EMBODIMENT")
+        if ft_config.modality_config_path is not None:
+            raise ValueError("CHIP datasets supply their own fixed modality configuration")
+        if ft_config.dataset_format in {"chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}:
+            from gr00t.configs.data.chip_replay_config import chip_replay_modality_config
+
+            register_modality_config(
+                chip_replay_modality_config(yaw_canonical=ft_config.dataset_format in {"chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}),
+                ft_config.embodiment_tag,
+            )
+        else:
+            register_modality_config(chip_native_modality_config(), ft_config.embodiment_tag)
+
     # all rank workers should register for the modality config
     if ft_config.modality_config_path is not None:
         load_modality_config(ft_config.modality_config_path)
@@ -67,6 +85,11 @@ if __name__ == "__main__":
                         "dataset_paths": dataset_paths,
                         "mix_ratio": 1.0,
                         "embodiment_tag": embodiment_tag,
+                        "dataset_type": (
+                            ft_config.dataset_format
+                            if ft_config.dataset_format in {"chip_native", "chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}
+                            else "physical_embodiment"
+                        ),
                     }
                 ],
             }
@@ -80,6 +103,7 @@ if __name__ == "__main__":
     config.model.tune_projector = ft_config.tune_projector
     config.model.tune_diffusion_model = ft_config.tune_diffusion_model
     config.model.state_dropout_prob = ft_config.state_dropout_prob
+    config.model.rtc_training_max_delay = ft_config.rtc_training_max_delay
     config.model.random_rotation_angle = ft_config.random_rotation_angle
     config.model.color_jitter_params = ft_config.color_jitter_params
     config.model.use_percentiles = ft_config.use_percentiles
@@ -100,6 +124,13 @@ if __name__ == "__main__":
     config.model.model_name = "nvidia/Cosmos-Reason2-2B"
     config.model.backbone_trainable_params_fp32 = True
     config.model.use_relative_action = True
+    if ft_config.dataset_format in {"chip_native", "chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"}:
+        config.model.state_history_length = 3
+        # Native targets are pre-encoded; replay targets are absolute poses in
+        # either the source world frame or its episode-initial heading frame.
+        config.model.use_relative_action = False
+        config.data.chip_task_description = ft_config.task_description
+        config.data.chip_val_ratio = ft_config.chip_val_ratio
 
     config.training.experiment_name = ft_config.experiment_name
     config.training.start_from_checkpoint = ft_config.base_model_path

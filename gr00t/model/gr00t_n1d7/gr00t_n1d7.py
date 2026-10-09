@@ -30,6 +30,7 @@ from gr00t.model.modules.embodiment_conditioned_mlp import (
     CategorySpecificMLP,
     MultiEmbodimentActionEncoder,
 )
+from gr00t.model.modules.rtc import condition_training_prefix, prepend_state_time
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,8 @@ class Gr00tN1d7ActionHead(nn.Module):
     def __init__(self, config: Gr00tN1d7Config):
         super().__init__()
         self.config = config
+        if config.rtc_training_max_delay < 0:
+            raise ValueError("rtc_training_max_delay must be nonnegative")
         self.hidden_size = config.hidden_size
         self.input_embedding_dim = config.input_embedding_dim
 
@@ -236,7 +239,16 @@ class Gr00tN1d7ActionHead(nn.Module):
 
         # Convert (continuous) t -> discrete if needed
         t_discretized = (t[:, 0, 0] * self.num_timestep_buckets).long()
-        action_features = self.action_encoder(noisy_trajectory, t_discretized, embodiment_id)
+        action_mask = action_input.action_mask
+        action_time = t_discretized
+        model_time = t_discretized
+        if self.training and self.config.rtc_training_max_delay > 0:
+            noisy_trajectory, token_time, action_mask = condition_training_prefix(
+                actions, noisy_trajectory, t, action_mask, self.config.rtc_training_max_delay
+            )
+            action_time = (token_time * self.num_timestep_buckets).long()
+            model_time = prepend_state_time(action_time, t_discretized)
+        action_features = self.action_encoder(noisy_trajectory, action_time, embodiment_id)
 
         # Maybe add position embedding.
         if self.config.add_pos_embed:
@@ -255,7 +267,7 @@ class Gr00tN1d7ActionHead(nn.Module):
                 hidden_states=sa_embs,
                 encoder_hidden_states=vl_embeds,
                 encoder_attention_mask=vl_attn_mask,
-                timestep=t_discretized,
+                timestep=model_time,
                 return_all_hidden_states=True,
                 image_mask=image_mask,
                 backbone_attention_mask=backbone_attention_mask,
@@ -265,7 +277,7 @@ class Gr00tN1d7ActionHead(nn.Module):
                 hidden_states=sa_embs,
                 encoder_hidden_states=vl_embeds,
                 encoder_attention_mask=vl_attn_mask,
-                timestep=t_discretized,
+                timestep=model_time,
                 return_all_hidden_states=True,
             )
 
@@ -273,7 +285,6 @@ class Gr00tN1d7ActionHead(nn.Module):
         pred_actions = pred[:, -actions.shape[1] :]
 
         # Slice out only the action portion of pred and target.
-        action_mask = action_input.action_mask
         action_loss = F.mse_loss(pred_actions, velocity, reduction="none") * action_mask
         loss = action_loss.sum() / (action_mask.sum() + 1e-6)
 
@@ -355,7 +366,34 @@ class Gr00tN1d7ActionHead(nn.Module):
         dt = 1.0 / self.num_inference_timesteps
         vel_strength = torch.ones_like(actions)
 
-        if "action" in action_input:
+        trained_rtc = options is not None and options.get("rtc_mode") == "trained"
+        prefix_length = 0
+        if trained_rtc:
+            if self.config.rtc_training_max_delay <= 0:
+                raise ValueError(
+                    "Trained RTC requires a checkpoint trained with rtc_training_max_delay > 0"
+                )
+            prefix_length = options.get("rtc_prefix_length", 0)
+            if (
+                not isinstance(prefix_length, int)
+                or not 0 <= prefix_length <= self.config.rtc_training_max_delay
+                or prefix_length >= self.action_horizon
+            ):
+                raise ValueError("RTC prefix length exceeds the trained delay or action horizon")
+            if prefix_length:
+                if "action" not in action_input:
+                    raise ValueError("Trained RTC requires a normalized action prefix")
+                prefix = action_input.action
+                if (
+                    prefix.shape[0] != batch_size
+                    or prefix.shape[1] < prefix_length
+                    or prefix.shape[2] != self.action_dim
+                ):
+                    raise ValueError("RTC action prefix shape does not match the model")
+                actions[:, :prefix_length] = prefix[:, :prefix_length]
+                vel_strength[:, :prefix_length] = 0
+
+        elif "action" in action_input:
             # If action in input when doing get action, it means we want to use RTC.
             # action_horizon is the action horizon of the input action.
             # rtc_overlap_steps is the number of steps to overlap with the previous action chunks.
@@ -402,7 +440,13 @@ class Gr00tN1d7ActionHead(nn.Module):
             timesteps_tensor = torch.full(
                 size=(batch_size,), fill_value=t_discretized, device=device
             )
-            action_features = self.action_encoder(actions, timesteps_tensor, embodiment_id)
+            action_time = timesteps_tensor
+            model_time = timesteps_tensor
+            if trained_rtc:
+                action_time = timesteps_tensor[:, None].expand(-1, self.action_horizon).clone()
+                action_time[:, :prefix_length] = self.num_timestep_buckets
+                model_time = prepend_state_time(action_time, timesteps_tensor)
+            action_features = self.action_encoder(actions, action_time, embodiment_id)
             # Add position embedding.
             if self.config.add_pos_embed:
                 pos_ids = torch.arange(action_features.shape[1], dtype=torch.long, device=device)
@@ -417,7 +461,7 @@ class Gr00tN1d7ActionHead(nn.Module):
                 model_output = self.model(
                     hidden_states=sa_embs,
                     encoder_hidden_states=vl_embeds,
-                    timestep=timesteps_tensor,
+                    timestep=model_time,
                     image_mask=backbone_output.image_mask,
                     backbone_attention_mask=backbone_output.backbone_attention_mask,
                 )
@@ -425,7 +469,7 @@ class Gr00tN1d7ActionHead(nn.Module):
                 model_output = self.model(
                     hidden_states=sa_embs,
                     encoder_hidden_states=vl_embeds,
-                    timestep=timesteps_tensor,
+                    timestep=model_time,
                 )
             pred = self.action_decoder(model_output, embodiment_id)
 
@@ -433,6 +477,8 @@ class Gr00tN1d7ActionHead(nn.Module):
 
             # Update actions using euler integration.
             actions = actions + dt * pred_velocity * vel_strength
+            if trained_rtc and prefix_length:
+                actions[:, :prefix_length] = action_input.action[:, :prefix_length]
 
         return BatchFeature(
             data={

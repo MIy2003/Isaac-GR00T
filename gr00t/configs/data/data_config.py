@@ -93,6 +93,9 @@ class DataConfig:
     multiprocessing_context: str = "fork"  # Options: "fork", "spawn", and "forkserver"
     allow_padding: bool = False
 
+    chip_task_description: str = "Perform the demonstrated task."
+    chip_val_ratio: float = 0.05
+
     # Subsample ratio for the dataset
     subsample_ratio: float = 1.0
 

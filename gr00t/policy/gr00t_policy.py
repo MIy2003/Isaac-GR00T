@@ -20,6 +20,7 @@ This module provides the core policy classes for running Gr00t models:
 - Gr00tSimPolicyWrapper: Wrapper for compatibility with existing Gr00t simulation environments
 """
 
+from copy import copy
 from pathlib import Path
 from typing import Any
 
@@ -377,6 +378,48 @@ class Gr00tPolicy(BasePolicy):
                     f"Language batch item must be a string. Got {type(batch_item[0])}"
                 )
 
+    def _prepare_rtc_prefix(self, options, batch_size):
+        """Validate a time-aligned, physical-unit prefix for trained hard-prefix RTC."""
+        if not options or ("rtc_mode" not in options and "rtc_prefix" not in options):
+            return None, None
+        if options.get("rtc_mode") != "trained":
+            raise ValueError("Gr00tPolicy RTC options require rtc_mode='trained'")
+        max_delay = getattr(self.model.config, "rtc_training_max_delay", 0)
+        if max_delay <= 0:
+            raise ValueError("This checkpoint was not trained with RTC action prefixes")
+        prefix = options.get("rtc_prefix")
+        if prefix is None:
+            return None, {"rtc_mode": "trained", "rtc_prefix_length": 0}
+        keys = self.modality_configs["action"].modality_keys
+        if not isinstance(prefix, dict) or set(prefix) != set(keys):
+            raise ValueError(f"rtc_prefix must contain action keys {keys}")
+        arrays = {k: np.asarray(prefix[k], dtype=np.float32) for k in keys}
+        lengths = set()
+        params = self.processor.state_action_processor.norm_params[self.embodiment_tag.value][
+            "action"
+        ]
+        for key, value in arrays.items():
+            if (
+                value.ndim != 3
+                or value.shape[0] != batch_size
+                or value.shape[2] != int(params[key]["dim"])
+            ):
+                raise ValueError(
+                    f"rtc_prefix.{key} must have shape [B,d,{int(params[key]['dim'])}]"
+                )
+            if not np.isfinite(value).all():
+                raise ValueError("RTC prefix must contain finite values")
+            lengths.add(value.shape[1])
+        if len(lengths) != 1:
+            raise ValueError("RTC prefix fields must share the same delay")
+        delay = lengths.pop()
+        horizon = len(self.modality_configs["action"].delta_indices)
+        if delay > max_delay or delay >= horizon:
+            raise ValueError(
+                "RTC delay exceeds the checkpoint's trained delay or effective horizon"
+            )
+        return arrays if delay else None, {"rtc_mode": "trained", "rtc_prefix_length": delay}
+
     def _get_action(
         self, observation: dict[str, Any], options: dict[str, Any] | None = None
     ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -391,22 +434,45 @@ class Gr00tPolicy(BasePolicy):
 
         Args:
             observation: Batched observation dictionary
-            options: Optional parameters (currently unused)
+            options: Optional rtc_mode='trained' and rtc_prefix action dictionary [B,d,D].
 
         Returns:
             Tuple of (actions_dict, info_dict)
         """
         # Step 1: Split batched observation into individual observations
         unbatched_observations = self._unbatch_observation(observation)
+        prefix, model_options = self._prepare_rtc_prefix(options, len(unbatched_observations))
+        if prefix is not None:
+            # Committed actions cannot be clipped to training quantiles. A local
+            # copy avoids changing processor settings shared by other requests.
+            prefix_processor = copy(self.processor.state_action_processor)
+            prefix_processor.clip_outliers = False
         processed_inputs = []
 
         # Step 2: Process each observation through the VLA processor
         states = []
-        for obs in unbatched_observations:
+        for index, obs in enumerate(unbatched_observations):
             vla_step_data = self._to_vla_step_data(obs)
             states.append(vla_step_data.states)  # dict[str, np.ndarray[np.float32, (T, D)]]
             messages = [{"type": MessageType.EPISODE_STEP.value, "content": vla_step_data}]
-            processed_inputs.append(self.processor(messages))
+            processed = self.processor(messages)
+            if prefix is not None:
+                normalized = prefix_processor.apply_action(
+                    {k: v[index] for k, v in prefix.items()},
+                    self.embodiment_tag.value,
+                    vla_step_data.states,
+                )
+                normalized = np.concatenate(
+                    [normalized[k] for k in self.modality_configs["action"].modality_keys], axis=-1
+                )
+                padded = torch.zeros(
+                    self.processor.max_action_horizon,
+                    self.processor.max_action_dim,
+                    dtype=torch.get_default_dtype(),
+                )
+                padded[: normalized.shape[0], : normalized.shape[1]] = torch.from_numpy(normalized)
+                processed["action"] = padded
+            processed_inputs.append(processed)
 
         # Step 3: Collate processed inputs into a single batch for model
         collated_inputs = self.collate_fn(processed_inputs)
@@ -414,7 +480,10 @@ class Gr00tPolicy(BasePolicy):
 
         # Step 4: Run model inference to predict actions
         with torch.inference_mode():
-            model_pred = self.model.get_action(**collated_inputs)
+            if model_options is None:
+                model_pred = self.model.get_action(**collated_inputs)
+            else:
+                model_pred = self.model.get_action(**collated_inputs, options=model_options)
         normalized_action = model_pred["action_pred"].float()
 
         # Step 5: Decode actions from normalized space back to physical units
@@ -429,6 +498,10 @@ class Gr00tPolicy(BasePolicy):
         casted_action = {
             key: value.astype(np.float32) for key, value in unnormalized_action.items()
         }
+        if prefix is not None:
+            # Preserve committed physical values despite bf16/normalization rounding.
+            for key, value in prefix.items():
+                casted_action[key][:, : value.shape[1]] = value
         return casted_action, {}
 
     def check_action(self, action: dict[str, Any]) -> None:
