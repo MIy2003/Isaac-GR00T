@@ -15,6 +15,7 @@
 
 # Finetune config used for single node post-training.
 from dataclasses import dataclass
+from typing import Literal
 import warnings
 
 
@@ -43,6 +44,23 @@ class FinetuneConfig:
     """
     Path to a Python file defining the modality configuration for the given embodiment. 
     If None, use the pre-registered modality config in `gr00t/configs/data/embodiment_configs.py`. 
+    """
+
+    dataset_format: Literal["lerobot", "chip_native", "chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"] = "lerobot"
+    """chip_native reads reference-only episodes; chip_replay reads measured-state replay pairs.
+    chip_replay_yaw_canonical additionally removes the source reference's initial heading.
+    """
+
+    task_description: str = "Perform the demonstrated task."
+    """Fixed language instruction for CHIP data; use the same instruction at inference."""
+
+    chip_val_ratio: float = 0.05
+    """Fraction of CHIP episodes held out from training and normalization statistics."""
+
+    rtc_training_max_delay: int = 0
+    """Maximum clean action prefix during training, in action rows. 0 disables RTC.
+    Each example samples a delay uniformly including zero; padding is excluded.
+    For CHIP, 6 rows correspond to 200 ms at 30 Hz.
     """
 
     # --- Model Tuning Flags ---
@@ -197,6 +215,8 @@ class FinetuneConfig:
     Useful for CI/testing to skip the slow checkpoint shard loading."""
 
     def __post_init__(self) -> None:
+        if self.rtc_training_max_delay < 0:
+            raise ValueError("rtc_training_max_delay must be nonnegative")
         if self.gradient_accumulation_steps < 1:
             raise ValueError(
                 f"gradient_accumulation_steps must be >= 1, got {self.gradient_accumulation_steps}"

@@ -109,6 +109,8 @@ class Gr00tN1d7Config(PretrainedConfig):
     noise_s: float = 0.999
     num_timestep_buckets: int = 1000
 
+    rtc_training_max_delay: int = 0  # Clean prefix length in action rows; 0 disables RTC.
+
     # Training parameters
     tune_projector: bool = True
     tune_diffusion_model: bool = True

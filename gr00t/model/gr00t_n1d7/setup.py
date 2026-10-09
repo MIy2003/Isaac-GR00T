@@ -27,6 +27,7 @@ from gr00t.data.dataset.factory import DatasetFactory
 from gr00t.model.base.model_pipeline import ModelPipeline
 from gr00t.model.gr00t_n1d7.gr00t_n1d7 import Gr00tN1d7
 from gr00t.model.gr00t_n1d7.processing_gr00t_n1d7 import Gr00tN1d7Processor
+from gr00t.model.modules.state_history import expand_state_history
 from gr00t.model.registry import register_model
 from gr00t.utils.dist_utils import run_or_wait_on_rank0
 
@@ -87,6 +88,7 @@ class Gr00tN1d7Pipeline(ModelPipeline):
                 tune_diffusion_model=self.config.model.tune_diffusion_model,
                 tune_vlln=self.config.model.tune_vlln,
                 state_dropout_prob=self.config.model.state_dropout_prob,
+                rtc_training_max_delay=self.config.model.rtc_training_max_delay,
                 backbone_trainable_params_fp32=self.config.model.backbone_trainable_params_fp32,
                 load_bf16=self.config.model.load_bf16,
                 transformers_loading_kwargs=self.transformers_loading_kwargs,
@@ -124,6 +126,18 @@ class Gr00tN1d7Pipeline(ModelPipeline):
                 self.config.model,
                 transformers_loading_kwargs=self.transformers_loading_kwargs,
             )
+
+        if any(ds.dataset_type in {"chip_native", "chip_replay", "chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"} for ds in self.config.data.datasets):
+            if self.config.model.state_history_length != 3:
+                raise ValueError("CHIP requires model.state_history_length=3")
+            expand_state_history(model, 3)
+            # Retain the checkpoint's internal action capacity; the processor
+            # masks training after the configured CHIP horizon and returns only those rows.
+            self.config.model.action_horizon = model.config.action_horizon
+            self.config.model.max_state_dim = model.config.max_state_dim
+            self.config.model.max_action_dim = model.config.max_action_dim
+            if model.config.max_state_dim < 37 or model.config.max_action_dim < 37:
+                raise ValueError("CHIP requires at least 37 state/action dimensions")
 
         logging.debug(f"Model Config: {model.config}")
         with run_or_wait_on_rank0(label="final_model_config.json write") as is_rank0:

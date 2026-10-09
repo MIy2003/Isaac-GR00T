@@ -31,6 +31,7 @@ import torchvision.transforms.v2 as transforms
 from transformers import AutoProcessor
 from transformers.feature_extraction_utils import BatchFeature
 from transformers.utils import cached_file
+from transformers.utils.hub import is_offline_mode
 
 from gr00t.configs.data.embodiment_configs import ModalityConfig
 from gr00t.data.embodiment_tags import EmbodimentTag
@@ -126,7 +127,23 @@ def build_processor(model_name: str, transformers_loading_kwargs: dict) -> Qwen3
             "Qwen3VLProcessor is not available. "
             "Please upgrade transformers: pip install transformers>=4.52.0"
         )
-    return Qwen3VLProcessor.from_pretrained(model_name, **transformers_loading_kwargs)
+    loading_kwargs = dict(transformers_loading_kwargs)
+    if not os.path.isdir(model_name) and (
+        is_offline_mode() or loading_kwargs.get("local_files_only", False)
+    ):
+        # Transformers 4.57's tokenizer regex check calls model_info for Hub IDs
+        # even offline. Resolve the cached directory first so every processor
+        # component loads locally, without rewriting the saved upstream model ID.
+        hub_kwargs = {
+            key: loading_kwargs[key]
+            for key in ("cache_dir", "revision", "token", "subfolder", "_commit_hash")
+            if key in loading_kwargs
+        }
+        config_file = cached_file(model_name, "config.json", local_files_only=True, **hub_kwargs)
+        model_name = str(Path(config_file).parent)
+        loading_kwargs.pop("subfolder", None)
+        loading_kwargs["local_files_only"] = True
+    return Qwen3VLProcessor.from_pretrained(model_name, **loading_kwargs)
 
 
 def validate_action_horizons(modality_configs, max_action_horizon: int) -> None:
