@@ -94,6 +94,9 @@ class DataConfig:
     allow_padding: bool = False
 
     chip_task_description: str = "Perform the demonstrated task."
+    chip_replay_action_stride: int = 1
+    """Stride in original 30-Hz replay rows: 1 = 30 Hz, 3 = 10 Hz actions."""
+
     chip_val_ratio: float = 0.05
 
     # Subsample ratio for the dataset

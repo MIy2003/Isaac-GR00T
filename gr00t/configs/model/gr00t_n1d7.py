@@ -110,6 +110,8 @@ class Gr00tN1d7Config(PretrainedConfig):
     num_timestep_buckets: int = 1000
 
     rtc_training_max_delay: int = 0  # Clean prefix length in action rows; 0 disables RTC.
+    ta_force: dict | None = None  # Independent TA-VLA action-expert force adaptation.
+    force_mot: dict | None = None  # Additive expert; absent in existing checkpoints.
 
     # Training parameters
     tune_projector: bool = True

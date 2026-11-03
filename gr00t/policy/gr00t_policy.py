@@ -107,7 +107,7 @@ class Gr00tPolicy(BasePolicy):
         model_dir = Path(model_path)
 
         # Load the pretrained model and move to target device with bfloat16 precision
-        model = AutoModel.from_pretrained(model_dir)
+        model = self._load_model(model_dir)
         model.eval()  # Set model to evaluation mode
         model.to(device=device, dtype=torch.bfloat16)
         self.model = model
@@ -174,6 +174,9 @@ class Gr00tPolicy(BasePolicy):
         assert len(language_keys) >= 1, "At least one language key is required"
         assert len(language_delta_indices) == 1, "Only one language delta index is supported"
         self.language_key = language_keys[0]
+
+    def _load_model(self, model_dir):
+        return AutoModel.from_pretrained(model_dir)
 
     def _unbatch_observation(self, value: dict[str, Any]) -> list[dict[str, Any]]:
         """Unbatch a batched observation into a list of single observations.

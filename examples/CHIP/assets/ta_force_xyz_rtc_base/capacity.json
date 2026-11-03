@@ -1,0 +1,23 @@
+{
+  "gpu": "NVIDIA A800-SXM4-80GB",
+  "peak_allocated_gb": 69.36990213394165,
+  "peak_reserved_gb": 75.4921875,
+  "global_batch": 160,
+  "accumulation": 1,
+  "rtc_max_delay": 6,
+  "base_config_changes": {
+    "model.ta_force": [
+      null,
+      {
+        "mode": "EXPERT_HIS_C_FUT",
+        "force_dim": 3,
+        "history_samples": 10,
+        "loss_weight": 0.1
+      }
+    ],
+    "training.output_dir": [
+      "/share/ml/yangmin/gr00t-chip/outputs/dough_shaving_replay_yaw_1gpu_5284",
+      "/share/ml/yangmin/gr00t-chip/outputs/dough_ta_force_xyz_rtc_capacity_5835"
+    ]
+  }
+}

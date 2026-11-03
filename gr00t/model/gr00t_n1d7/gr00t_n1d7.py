@@ -46,6 +46,12 @@ class Gr00tN1d7ActionHead(nn.Module):
         self.config = config
         if config.rtc_training_max_delay < 0:
             raise ValueError("rtc_training_max_delay must be nonnegative")
+        if getattr(config, "ta_force", None) is not None:
+            if getattr(config, "force_mot", None) is not None:
+                raise ValueError("TA Force requires its own path without Force MoT")
+            from gr00t.model.modules.ta_force import TAForce
+
+            self.ta_force = TAForce(config, config.ta_force)
         self.hidden_size = config.hidden_size
         self.input_embedding_dim = config.input_embedding_dim
 
@@ -200,6 +206,8 @@ class Gr00tN1d7ActionHead(nn.Module):
             BatchFeature containing:
                 - loss: action prediction loss
         """
+        if hasattr(self, "ta_force"):
+            return self.ta_force.training_forward(self, backbone_output, action_input)
         # Set frozen modules to eval
         self.set_frozen_modules_to_eval_mode()
 
@@ -352,6 +360,9 @@ class Gr00tN1d7ActionHead(nn.Module):
             embodiment_id: [B] (embodiment IDs)
             backbone_output: Output from the backbone model
         """
+        if hasattr(self, "ta_force"):
+            features = BatchFeature(dict(backbone_features=backbone_features, state_features=state_features))
+            return self.ta_force.sample(self, features, backbone_output, action_input, options)
         vl_embeds = backbone_features
 
         # Set initial actions as the sampled noise.

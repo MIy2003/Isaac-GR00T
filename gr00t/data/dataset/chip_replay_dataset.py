@@ -30,14 +30,17 @@ class ChipReplayDataset(ChipNativeDataset):
         split="train",
         yaw_canonical=False,
         ideal_state=False,
+        action_stride=1,
     ):
         ShardedDataset.__init__(self, dataset_path)
         self.yaw_canonical = yaw_canonical
         self.ideal_state = ideal_state
+        self.action_stride = action_stride
+        self.action_offsets = np.arange(CHIP_ACTION_HORIZON) * action_stride
         if ideal_state and not yaw_canonical:
             raise ValueError("Ideal action-derived state requires yaw canonical actions")
         self.action_key = "reference_yaw_canonical" if yaw_canonical else "reference_absolute"
-        if modality_configs != chip_replay_modality_config(yaw_canonical=yaw_canonical):
+        if modality_configs != chip_replay_modality_config(yaw_canonical=yaw_canonical, action_stride=action_stride):
             raise ValueError("chip_replay requires its own modality config")
         if shard_size < 1 or not 0 <= val_ratio < 1 or split not in {"train", "val"}:
             raise ValueError("Invalid shard_size, val_ratio or split")
@@ -133,9 +136,10 @@ class ChipReplayDataset(ChipNativeDataset):
             index = len(self.episodes)
             self.episodes.append(({"state": fields, "action": action}, image_paths))
             self.episode_names.append(name)
-            for t in range(0, length - CHIP_ACTION_HORIZON + 1, 3):
+            span = int(self.action_offsets[-1]) + 1
+            for t in range(0, length - span + 1, 3):
                 # Reject windows containing invalid rows, including history intervals.
-                if valid[max(0, t - 6) : t + CHIP_ACTION_HORIZON].all():
+                if valid[max(0, t - 6) : t + span].all():
                     self.samples.append((index, t))
         if total_frames != manifest.get("source_image_frames"):
             raise ValueError("Manifest source_image_frames does not match NPZ lengths")
@@ -153,4 +157,4 @@ class ChipReplayDataset(ChipNativeDataset):
             key: arrays["state"][key][history].reshape(3, OBS_FIELD_DIMS[key])
             for key in self.state_keys
         }
-        return states, arrays["action"][t : t + CHIP_ACTION_HORIZON].copy()
+        return states, arrays["action"][t + self.action_offsets].copy()

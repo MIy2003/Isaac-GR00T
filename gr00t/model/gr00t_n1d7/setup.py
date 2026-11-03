@@ -74,6 +74,16 @@ class Gr00tN1d7Pipeline(ModelPipeline):
     def setup(self):
         self.model = self._create_model()
         self.train_dataset, self.eval_dataset = self._create_dataset(self.save_cfg_dir)
+        if self.model_config.ta_force is not None:
+            if len(self.train_dataset.datasets) != 1:
+                raise ValueError("TA Force training currently expects one task dataset")
+            dataset = self.train_dataset.datasets[0]
+            dataset.history = self.model.action_head.ta_force.spec.history_samples
+            stats = dataset.force_statistics()
+            branch = self.model.action_head.ta_force
+            branch.force_mean.copy_(torch.tensor(stats["mean"]).to(branch.force_mean))
+            branch.force_std.copy_(torch.tensor(stats["std"]).to(branch.force_std))
+            (self.save_cfg_dir / "ta_force_statistics.json").write_text(json.dumps(stats, indent=2))
         self.data_collator = self._create_collator()
 
     def _create_model(self):
@@ -139,6 +149,10 @@ class Gr00tN1d7Pipeline(ModelPipeline):
             if model.config.max_state_dim < 37 or model.config.max_action_dim < 37:
                 raise ValueError("CHIP requires at least 37 state/action dimensions")
 
+        if self.model_config.ta_force is not None:
+            from gr00t.model.modules.ta_force import enable_ta_force
+
+            enable_ta_force(model, self.model_config.ta_force)
         logging.debug(f"Model Config: {model.config}")
         with run_or_wait_on_rank0(label="final_model_config.json write") as is_rank0:
             if is_rank0:

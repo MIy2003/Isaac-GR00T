@@ -1,0 +1,62 @@
+{
+  "dough": {
+    "statistics.json": true,
+    "processor_config.json": true,
+    "model_config_changes": {
+      "ta_force": [
+        null,
+        {
+          "mode": "EXPERT_HIS_C_FUT",
+          "force_dim": 3,
+          "history_samples": 10,
+          "loss_weight": 0.1
+        }
+      ]
+    },
+    "config_changes": {
+      "model.ta_force": [
+        null,
+        {
+          "mode": "EXPERT_HIS_C_FUT",
+          "force_dim": 3,
+          "history_samples": 10,
+          "loss_weight": 0.1
+        }
+      ],
+      "training.output_dir": [
+        "/share/ml/yangmin/gr00t-chip/outputs/dough_shaving_replay_yaw_1gpu_5284",
+        "/share/ml/yangmin/gr00t-chip/outputs/dough_ta_force_xyz_rtc_base_5840"
+      ]
+    }
+  },
+  "pivot": {
+    "statistics.json": true,
+    "processor_config.json": true,
+    "model_config_changes": {
+      "ta_force": [
+        null,
+        {
+          "mode": "EXPERT_HIS_C_FUT",
+          "force_dim": 3,
+          "history_samples": 10,
+          "loss_weight": 0.1
+        }
+      ]
+    },
+    "config_changes": {
+      "model.ta_force": [
+        null,
+        {
+          "mode": "EXPERT_HIS_C_FUT",
+          "force_dim": 3,
+          "history_samples": 10,
+          "loss_weight": 0.1
+        }
+      ],
+      "training.output_dir": [
+        "/share/ml/yangmin/gr00t-chip/outputs/pivot_box_replay_yaw_1gpu_5448",
+        "/share/ml/yangmin/gr00t-chip/outputs/pivot_ta_force_xyz_rtc_base_5841"
+      ]
+    }
+  }
+}

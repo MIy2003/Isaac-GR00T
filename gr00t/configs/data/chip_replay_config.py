@@ -8,7 +8,9 @@ from gr00t.data.types import ModalityConfig
 REPLAY_SCHEMA = "chip_real_replay_multimodal_v001"
 
 
-def chip_replay_modality_config(*, yaw_canonical=False):
+def chip_replay_modality_config(*, yaw_canonical=False, action_stride=1):
+    if action_stride not in (1, 3):
+        raise ValueError("Replay action_stride must be 1 (30 Hz) or 3 (10 Hz)")
     config = chip_native_modality_config()
     config["state"] = ModalityConfig(
         delta_indices=[-6, -3, 0], modality_keys=list(REFERENCE_FIELDS)
@@ -17,5 +19,5 @@ def chip_replay_modality_config(*, yaw_canonical=False):
         "reference_yaw_canonical" if yaw_canonical else "reference_absolute"
     ]
     # Each state is pre-action: row t predicts the action paired with row t.
-    config["action"].delta_indices = list(range(CHIP_ACTION_HORIZON))
+    config["action"].delta_indices = [i * action_stride for i in range(CHIP_ACTION_HORIZON)]
     return config

@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-30",
+  "host": "lambda",
+  "run": "/share/ml/yangmin/gr00t-chip/runs/ta_force_xyz_20261030",
+  "jobs": [
+    {
+      "job_id": 5824,
+      "task": "Shave the dough.",
+      "base_job": 5284,
+      "output": "/share/ml/yangmin/gr00t-chip/outputs/dough_ta_force_xyz_5824"
+    },
+    {
+      "job_id": 5825,
+      "task": "Pivot the box.",
+      "base_job": 5448,
+      "output": "/share/ml/yangmin/gr00t-chip/outputs/pivot_ta_force_xyz_5825"
+    }
+  ],
+  "force_channels": [
+    "Fx",
+    "Fy",
+    "Fz"
+  ],
+  "history": 10,
+  "loss_weight": 0.1,
+  "steps": 20000,
+  "microbatch": 8,
+  "accumulation": 4,
+  "state": "replay measured LowState FK 37D",
+  "state_history": [
+    -6,
+    -3,
+    0
+  ],
+  "ideal_state": false,
+  "startup_verified": true,
+  "initial_losses": {
+    "5824": [
+      0.4268,
+      0.2526
+    ],
+    "5825": [
+      0.4222,
+      0.231
+    ]
+  },
+  "status": "cancelled_due_to_base_configuration_mismatch",
+  "superseded_by": [
+    5840,
+    5841
+  ]
+}

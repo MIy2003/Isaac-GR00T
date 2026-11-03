@@ -1,0 +1,219 @@
+{
+  "task": "Shave the dough.",
+  "samples": 10508,
+  "statistics": {
+    "mean": [
+      0.8364225966406917,
+      -3.0900642269541017,
+      -29.41928096594409
+    ],
+    "std": [
+      2.540341929576288,
+      0.8242374190481035,
+      1.7200946954023946
+    ],
+    "count": 34214,
+    "episodes": [
+      "g1_lowstate_20261025_203049",
+      "g1_lowstate_20261025_203957",
+      "g1_lowstate_20261025_204036",
+      "g1_lowstate_20261025_204100",
+      "g1_lowstate_20261025_204312",
+      "g1_lowstate_20261025_204438",
+      "g1_lowstate_20261025_210110",
+      "g1_lowstate_20261025_210200",
+      "g1_lowstate_20261025_210319",
+      "g1_lowstate_20261025_210759",
+      "g1_lowstate_20261025_210831",
+      "g1_lowstate_20261025_211129",
+      "g1_lowstate_20261025_211219",
+      "g1_lowstate_20261025_211301",
+      "g1_lowstate_20261025_211354",
+      "g1_lowstate_20261025_211456",
+      "g1_lowstate_20261025_211635",
+      "g1_lowstate_20261025_211712",
+      "g1_lowstate_20261025_211752",
+      "g1_lowstate_20261025_211831",
+      "g1_lowstate_20261025_211909",
+      "g1_lowstate_20261025_232840",
+      "g1_lowstate_20261025_232917",
+      "g1_lowstate_20261025_233050",
+      "g1_lowstate_20261026_173643",
+      "g1_lowstate_20261026_174302",
+      "g1_lowstate_20261026_174406",
+      "g1_lowstate_20261026_174441",
+      "g1_lowstate_20261026_174751",
+      "g1_lowstate_20261026_174835",
+      "g1_lowstate_20261026_174857",
+      "g1_lowstate_20261026_174917",
+      "g1_lowstate_20261026_175020",
+      "g1_lowstate_20261026_175148",
+      "g1_lowstate_20261026_175227",
+      "g1_lowstate_20261026_175315",
+      "g1_lowstate_20261026_175530",
+      "g1_lowstate_20261026_175936",
+      "g1_lowstate_20261026_180024",
+      "g1_lowstate_20261026_180109",
+      "g1_lowstate_20261026_180234",
+      "g1_lowstate_20261026_180325",
+      "g1_lowstate_20261026_180429",
+      "g1_lowstate_20261026_180520",
+      "g1_lowstate_20261026_180620",
+      "g1_lowstate_20261026_180711",
+      "g1_lowstate_20261026_180831",
+      "g1_lowstate_20261026_180932",
+      "g1_lowstate_20261026_181023",
+      "g1_lowstate_20261026_181124",
+      "g1_lowstate_20261026_181249",
+      "g1_lowstate_20261026_181336",
+      "g1_lowstate_20261026_181437",
+      "g1_lowstate_20261026_181536",
+      "g1_lowstate_20261026_181642",
+      "g1_lowstate_20261026_181743",
+      "g1_lowstate_20261026_182002",
+      "g1_lowstate_20261026_182116",
+      "g1_lowstate_20261026_182243",
+      "g1_lowstate_20261026_182340",
+      "g1_lowstate_20261026_182829",
+      "g1_lowstate_20261026_182921",
+      "g1_lowstate_20261026_182955",
+      "g1_lowstate_20261026_183042",
+      "g1_lowstate_20261026_183135",
+      "g1_lowstate_20261026_183229",
+      "g1_lowstate_20261026_183313",
+      "g1_lowstate_20261026_183357",
+      "g1_lowstate_20261026_183526",
+      "g1_lowstate_20261026_183553",
+      "g1_lowstate_20261026_183605",
+      "g1_lowstate_20261026_183632",
+      "g1_lowstate_20261026_183642",
+      "g1_lowstate_20261026_183706",
+      "g1_lowstate_20261026_183742",
+      "g1_lowstate_20261026_183803",
+      "g1_lowstate_20261026_183837",
+      "g1_lowstate_20261026_183916",
+      "g1_lowstate_20261026_183947",
+      "g1_lowstate_20261026_184006",
+      "g1_lowstate_20261026_184043",
+      "g1_lowstate_20261026_184123",
+      "g1_lowstate_20261026_184148",
+      "g1_lowstate_20261026_184315",
+      "g1_lowstate_20261026_184334",
+      "g1_lowstate_20261026_184351",
+      "g1_lowstate_20261026_184419",
+      "g1_lowstate_20261026_184448",
+      "g1_lowstate_20261026_184458",
+      "g1_lowstate_20261026_184508",
+      "g1_lowstate_20261026_184519",
+      "g1_lowstate_20261026_184539",
+      "g1_lowstate_20261026_184549",
+      "g1_lowstate_20261026_184600",
+      "g1_lowstate_20261026_184610",
+      "g1_lowstate_20261026_184620",
+      "g1_lowstate_20261026_184651",
+      "g1_lowstate_20261026_184706",
+      "g1_lowstate_20261026_184721",
+      "g1_lowstate_20261026_184732",
+      "g1_lowstate_20261026_184840",
+      "g1_lowstate_20261026_184858",
+      "g1_lowstate_20261026_184908",
+      "g1_lowstate_20261026_184919",
+      "g1_lowstate_20261026_184932",
+      "g1_lowstate_20261026_185006",
+      "g1_lowstate_20261026_185015",
+      "g1_lowstate_20261026_185026",
+      "g1_lowstate_20261026_185040",
+      "g1_lowstate_20261026_185050",
+      "g1_lowstate_20261026_185156",
+      "g1_lowstate_20261026_185221",
+      "g1_lowstate_20261026_185230",
+      "g1_lowstate_20261026_185239",
+      "g1_lowstate_20261026_185309",
+      "g1_lowstate_20261026_185321",
+      "g1_lowstate_20261026_185335",
+      "g1_lowstate_20261026_185419",
+      "g1_lowstate_20261026_185432",
+      "g1_lowstate_20261026_185539",
+      "g1_lowstate_20261026_185551",
+      "g1_lowstate_20261026_185601",
+      "g1_lowstate_20261026_185619",
+      "g1_lowstate_20261026_185627",
+      "g1_lowstate_20261026_185640",
+      "g1_lowstate_20261026_185647",
+      "g1_lowstate_20261026_185715"
+    ]
+  },
+  "coverage": {
+    "history_valid": 102676,
+    "history_total": 105080,
+    "future_valid": 252108,
+    "future_total": 252192
+  },
+  "state_audit": {
+    "source": "real replay LowState, pre-action",
+    "representation": "measured FK 37D, own initial IMU yaw removed",
+    "ideal_state": false,
+    "history_offsets": [
+      -6,
+      -3,
+      0
+    ],
+    "audited_samples": 10508,
+    "checkpoint_state_history_length": 3,
+    "statistics_sha256": "f01a55b5aed39e7de0ed634a5cf363d89c209254be966c53e3e0946724210d02"
+  },
+  "shapes": {
+    "future_force": [
+      1,
+      40,
+      3
+    ],
+    "force": [
+      1,
+      10,
+      3
+    ],
+    "action_mask": [
+      1,
+      40,
+      132
+    ],
+    "state": [
+      1,
+      3,
+      132
+    ],
+    "action": [
+      1,
+      40,
+      132
+    ],
+    "input_ids": [
+      1,
+      237
+    ],
+    "attention_mask": [
+      1,
+      237
+    ],
+    "pixel_values": [
+      896,
+      1536
+    ],
+    "image_grid_thw": [
+      2,
+      3
+    ],
+    "force_valid": [
+      1,
+      10
+    ],
+    "future_force_valid": [
+      1,
+      40
+    ],
+    "embodiment_id": [
+      1
+    ]
+  }
+}

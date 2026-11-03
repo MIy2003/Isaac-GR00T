@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-30",
+  "run": "/share/ml/yangmin/gr00t-chip/runs/ta_force_xyz_rtc_base_20261030",
+  "cancelled_jobs": [
+    5824,
+    5825
+  ],
+  "capacity_job": 5835,
+  "allowed_config_changes": [
+    "model.ta_force",
+    "training.output_dir"
+  ],
+  "jobs": [
+    {
+      "id": 5840,
+      "task": "Shave the dough.",
+      "base_job": 5284,
+      "output": "/share/ml/yangmin/gr00t-chip/outputs/dough_ta_force_xyz_rtc_base_5840/dough_shaving_replay_yaw_1gpu"
+    },
+    {
+      "id": 5841,
+      "task": "Pivot the box.",
+      "base_job": 5448,
+      "output": "/share/ml/yangmin/gr00t-chip/outputs/pivot_ta_force_xyz_rtc_base_5841/pivot_box_replay_yaw_1gpu"
+    }
+  ],
+  "startup_verified": true,
+  "initial_losses": {
+    "5840": [
+      1.4957,
+      1.4961
+    ],
+    "5841": [
+      1.4911
+    ]
+  }
+}

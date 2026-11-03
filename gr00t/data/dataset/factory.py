@@ -65,6 +65,12 @@ class DatasetFactory:
                         from gr00t.data.dataset.chip_replay_dataset import ChipReplayDataset
 
                         dataset_class = ChipReplayDataset
+                    if getattr(self.config.model, "ta_force", None) is not None:
+                        from gr00t.data.dataset.ta_force_dataset import TAForceShardedReplayDataset
+
+                        if dataset_spec.dataset_type != "chip_replay_yaw_canonical":
+                            raise ValueError("TA Force requires chip_replay_yaw_canonical")
+                        dataset_class = TAForceShardedReplayDataset
                     dataset = dataset_class(
                         dataset_path,
                         self.config.data.modality_configs[embodiment_tag],
@@ -73,7 +79,8 @@ class DatasetFactory:
                         task_description=self.config.data.chip_task_description,
                         val_ratio=self.config.data.chip_val_ratio,
                         **({"yaw_canonical": dataset_spec.dataset_type in {"chip_replay_yaw_canonical", "chip_ideal_yaw_canonical"},
-                            "ideal_state": dataset_spec.dataset_type == "chip_ideal_yaw_canonical"}
+                            "ideal_state": dataset_spec.dataset_type == "chip_ideal_yaw_canonical",
+                            "action_stride": self.config.data.chip_replay_action_stride}
                            if dataset_spec.dataset_type != "chip_native" else {}),
                     )
                     datasets.append(dataset)

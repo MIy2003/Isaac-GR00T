@@ -122,6 +122,40 @@ class ReplayContractTest(unittest.TestCase):
         changed, _ = load().state_action(3)
         np.testing.assert_array_equal(np.concatenate(list(changed.values()), axis=-1), packed)
 
+    def test_10hz_targets_history_and_window_boundary(self):
+        # 80 source rows admit t=0,3,6,9; t=12 would need row 81.
+        for key in ("state", "action", "valid", "state_valid", "action_valid", "state_action_timing_valid"):
+            self.data[key] = np.concatenate([self.data[key], self.data[key]])
+        self.data["action"] = np.arange(80 * 37, dtype=np.float32).reshape(80, 37) / 100
+        self.data["image_index"] = np.arange(80)
+        self.data["image_file"] *= 2
+        manifest = json.loads((self.root / "dataset_manifest.json").read_text())
+        manifest["source_image_frames"] = 80
+        (self.root / "dataset_manifest.json").write_text(json.dumps(manifest))
+
+        def load():
+            np.savez(self.path / "state_action_30hz.npz", **self.data)
+            return ChipReplayDataset(
+                self.root, chip_replay_modality_config(action_stride=3),
+                val_ratio=0, action_stride=3,
+            )
+
+        ds = load()
+        self.assertEqual(ds.samples, [(0, t) for t in (0, 3, 6, 9)])
+        states, actions = ds.state_action(3)
+        np.testing.assert_array_equal(actions, self.data["action"][9:79:3])
+        lower_ids = [self.names.index(n) for n in LOWER_JOINT_NAMES]
+        np.testing.assert_array_equal(states["lower_joint_pos"], self.data["state"][[3, 6, 9]][:, lower_ids])
+        step = ds.get_step(3)
+        self.assertEqual(step.actions["reference_absolute"].shape, (24, 37))
+        self.assertEqual([int(im[0, 0, 0]) for im in step.images["camera0_rgb"]], [3, 9])
+        self.assertEqual(chip_replay_modality_config(action_stride=3)["action"].delta_indices, list(range(0, 72, 3)))
+        # A bad row between sampled targets must also invalidate the window.
+        self.data["state_action_timing_valid"][70] = False
+        self.assertEqual(load().samples, [(0, 0)])
+        with self.assertRaisesRegex(ValueError, "action_stride"):
+            chip_replay_modality_config(action_stride=2)
+
     def test_fk_ignores_joint_array_order_and_world_heading(self):
         rng = np.random.default_rng(3)
         q = rng.normal(0, 0.1, (8, 29))
